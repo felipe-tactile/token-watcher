@@ -31,6 +31,24 @@
   ],
   "preferences": [
     {
+      "name": "enableClaude",
+      "title": "Enable Claude",
+      "label": "Claude Code",
+      "description": "Show Claude Code usage and rate limits",
+      "type": "checkbox",
+      "default": true,
+      "required": false
+    },
+    {
+      "name": "enableCodex",
+      "title": "Enable Codex",
+      "label": "OpenAI Codex",
+      "description": "Show OpenAI Codex usage and rate limits",
+      "type": "checkbox",
+      "default": true,
+      "required": false
+    },
+    {
       "name": "credentialsPath",
       "title": "Claude Credentials Path",
       "description": "Path to Claude credentials file",

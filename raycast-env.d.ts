@@ -8,6 +8,10 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 type ExtensionPreferences = {
+  /** Enable Claude - Show Claude Code usage and rate limits */
+  "enableClaude": boolean,
+  /** Enable Codex - Show OpenAI Codex usage and rate limits */
+  "enableCodex": boolean,
   /** Claude Credentials Path - Path to Claude credentials file */
   "credentialsPath": string,
   /** Codex Credentials Path - Path to Codex auth file */

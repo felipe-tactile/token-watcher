@@ -5,7 +5,6 @@ import {
   launchCommand,
   LaunchType,
   openCommandPreferences,
-  Cache,
   getPreferenceValues,
   open,
 } from "@raycast/api";
@@ -18,7 +17,6 @@ import { getCodexPlanType } from "./lib/codex-credentials";
 import {
   checkServiceAvailability,
   type ServiceAvailability,
-  type Service,
 } from "./lib/service-config";
 import type {
   UsageApiResponse,
@@ -36,13 +34,6 @@ import {
   unixToIso,
   centsToDollars,
 } from "./lib/formatting";
-
-const cache = new Cache();
-
-function getSelectedService(): Service {
-  const val = cache.get("menuBarService");
-  return val === "codex" ? "codex" : "claude";
-}
 
 interface MenuBarData {
   availability: ServiceAvailability;
@@ -115,6 +106,9 @@ async function loadMenuBarData(): Promise<MenuBarData> {
   };
 }
 
+const CLAUDE_ICON = { source: "claude-icon.png" };
+const CODEX_ICON = { source: "codex-icon.png" };
+
 const DARK_GREEN: Color.Dynamic = { light: "#1a7f37", dark: "#2ea043" };
 
 function statusColor(utilization: number): Color | Color.Dynamic {
@@ -132,36 +126,43 @@ export default function MenuBar() {
   const openDashboard = () =>
     launchCommand({ name: "token-watcher", type: LaunchType.UserInitiated });
 
-  // Read which service drives the title (set from the dashboard dropdown)
-  const selected = getSelectedService();
   const prefs = getPreferenceValues<{ menuBarDisplay?: string }>();
   const showUsage = prefs.menuBarDisplay === "usage";
 
-  // Title: show % in menu bar based on selected service and display preference
+  // Title: show remaining/usage % for every enabled service
+  // Each service prefixed with a Unicode symbol matching its brand
   let title = "⏳";
-  let icon: MenuBarExtra.Props["icon"] = Icon.BarChart;
+  let icon: MenuBarExtra.Props["icon"] = "icon.png";
   if (error && !data) {
     title = "⚠️";
   } else if (data) {
     if (!data.availability.anyConfigured) {
       title = "Setup";
       icon = Icon.Gear;
-    } else if (selected === "codex" && data.codex?.rate_limit?.primary_window) {
-      const used = data.codex.rate_limit.primary_window.used_percent;
-      const display = showUsage ? used : Math.max(0, 100 - used);
-      title = `${display.toFixed(0)}%`;
-      icon = {
-        source: Icon.CircleFilled,
-        tintColor: statusColor(used),
-      };
-    } else if (data.rateLimits) {
-      const used = data.rateLimits.five_hour.utilization;
-      const display = showUsage ? used : Math.max(0, 100 - used);
-      title = `${display.toFixed(0)}%`;
-      icon = {
-        source: Icon.CircleFilled,
-        tintColor: statusColor(used),
-      };
+    } else {
+      const parts: string[] = [];
+
+      if (data.availability.claude) {
+        if (data.rateLimits) {
+          const used = data.rateLimits.five_hour.utilization;
+          const display = showUsage ? used : Math.max(0, 100 - used);
+          parts.push(`✦ ${display.toFixed(0)}%`);
+        } else {
+          parts.push("✦ --%");
+        }
+      }
+
+      if (data.availability.codex) {
+        if (data.codex?.rate_limit?.primary_window) {
+          const used = data.codex.rate_limit.primary_window.used_percent;
+          const display = showUsage ? used : Math.max(0, 100 - used);
+          parts.push(`⬢ ${display.toFixed(0)}%`);
+        } else {
+          parts.push("⬢ --%");
+        }
+      }
+
+      title = parts.join("  ");
     }
   }
 
@@ -188,14 +189,16 @@ export default function MenuBar() {
         <MenuBarExtra.Section title="Setup Required">
           <MenuBarExtra.Item
             title="Set up Claude Code"
-            icon={Icon.Terminal}
+            subtitle="~/.claude/.credentials.json"
+            icon={CLAUDE_ICON}
             onAction={() =>
               open("https://docs.anthropic.com/en/docs/claude-code/overview")
             }
           />
           <MenuBarExtra.Item
             title="Set up Codex"
-            icon={Icon.Terminal}
+            subtitle="~/.codex/auth.json"
+            icon={CODEX_ICON}
             onAction={() => open("https://codex.openai.com")}
           />
           <MenuBarExtra.Item

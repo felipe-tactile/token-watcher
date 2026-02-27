@@ -21,15 +21,22 @@ export function resolveCodexCredentialsPath(): string {
 }
 
 export function checkServiceAvailability(): ServiceAvailability {
-  const prefs = getPreferenceValues<{ credentialsPath?: string }>();
+  const prefs = getPreferenceValues<{
+    credentialsPath?: string;
+    enableClaude?: boolean;
+    enableCodex?: boolean;
+  }>();
+
+  const claudeEnabled = prefs.enableClaude !== false;
+  const codexEnabled = prefs.enableCodex !== false;
+
   const claudePath = prefs.credentialsPath?.trim()
     ? prefs.credentialsPath.trim().replace(/^~/, process.env.HOME || "")
     : CREDENTIALS_PATH;
-
   const codexPath = resolveCodexCredentialsPath();
 
-  const claude = existsSync(claudePath);
-  const codex = existsSync(codexPath);
+  const claude = claudeEnabled && existsSync(claudePath);
+  const codex = codexEnabled && existsSync(codexPath);
 
   const configured: Service[] = [];
   if (claude) configured.push("claude");
