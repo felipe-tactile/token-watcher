@@ -8,6 +8,16 @@
 Monitor Claude Code and OpenAI Codex token usage and rate limits directly from your menu bar.
 </p>
 
+## Screenshots
+
+| Menu Bar | Dashboard |
+|---|---|
+| ![Menu Bar](metadata/token-watcher-bar.png) | ![Dashboard](metadata/token-watcher-dashboard.png) |
+
+| Details | Details |
+|---|---|
+| ![Details](metadata/token-watcher-details-1.png) | ![Details](metadata/token-watcher-details-2.png) |
+
 ## Features
 
 - **Multi-service support** — Track Claude Code and OpenAI Codex side by side
