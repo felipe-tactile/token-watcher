@@ -1,0 +1,67 @@
+{
+  "name": "token-watcher",
+  "title": "Claude Token Watcher",
+  "description": "Monitor Claude Code token usage and rate limits from the menu bar",
+  "icon": "icon.png",
+  "author": "felipe",
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "menu-bar",
+      "title": "Claude Token Watcher",
+      "subtitle": "Token Usage",
+      "description": "Show Claude Code token usage and rate limits in the menu bar",
+      "mode": "menu-bar",
+      "interval": "5m"
+    },
+    {
+      "name": "detail-view",
+      "title": "Claude Token Details",
+      "subtitle": "Token Usage",
+      "description": "View detailed per-project token usage and rate limits",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "credentialsPath",
+      "title": "Credentials Path",
+      "description": "Path to Claude credentials file",
+      "type": "textfield",
+      "default": "~/.claude/.credentials.json",
+      "required": false
+    },
+    {
+      "name": "defaultModel",
+      "title": "Default Model",
+      "description": "Default model for cost calculation",
+      "type": "dropdown",
+      "default": "opus",
+      "required": false,
+      "data": [
+        { "title": "Opus", "value": "opus" },
+        { "title": "Sonnet", "value": "sonnet" }
+      ]
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.93.3",
+    "@raycast/utils": "^1.19.1"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "22.13.14",
+    "@types/react": "19.0.12",
+    "eslint": "^8.57.1",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"Error: no publish\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
