@@ -6,6 +6,8 @@ export const CLAUDE_DIR = join(homedir(), ".claude");
 export const CREDENTIALS_PATH = join(CLAUDE_DIR, ".credentials.json");
 export const PROJECTS_DIR = join(CLAUDE_DIR, "projects");
 
+export const CODEX_AUTH_PATH = join(homedir(), ".codex", "auth.json");
+
 export const USAGE_API_URL = "https://api.anthropic.com/api/oauth/usage";
 
 // Per-million-token pricing

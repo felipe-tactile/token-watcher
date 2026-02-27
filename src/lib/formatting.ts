@@ -51,15 +51,17 @@ export function formatRelativeTime(isoString: string): string {
   return isFuture ? `in ${relative}` : `${relative} ago`;
 }
 
-export function getUtilizationColor(pct: number): Color {
-  if (pct >= 80) return Color.Red;
-  if (pct >= 50) return Color.Yellow;
-  return Color.Green;
+export function getUtilizationColor(pct: number): Color.ColorLike {
+  const left = 100 - pct;
+  if (left <= 20) return Color.Red;
+  if (left <= 60) return Color.Orange;
+  return { light: "#1a7f37", dark: "#2ea043" };
 }
 
 export function getUtilizationEmoji(pct: number): string {
-  if (pct >= 80) return "🔴";
-  if (pct >= 50) return "🟡";
+  const left = 100 - pct;
+  if (left <= 20) return "🔴";
+  if (left <= 60) return "🟠";
   return "🟢";
 }
 
@@ -71,6 +73,15 @@ export function formatTimestamp(isoString: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+export function formatCodexPlanType(planType: string): string {
+  if (!planType) return "Codex";
+  return planType.charAt(0).toUpperCase() + planType.slice(1);
+}
+
+export function unixToIso(timestamp: number): string {
+  return new Date(timestamp * 1000).toISOString();
 }
 
 export function progressBar(usedPct: number, width = 30): string {

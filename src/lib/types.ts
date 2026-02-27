@@ -89,6 +89,27 @@ export interface CostBreakdown {
 
 export type ModelTier = "opus" | "sonnet";
 
+export interface CodexUsageResponse {
+  plan_type: string;
+  rate_limit?: {
+    primary_window?: {
+      used_percent: number;
+      reset_at: number;
+      limit_window_seconds: number;
+    };
+    secondary_window?: {
+      used_percent: number;
+      reset_at: number;
+      limit_window_seconds: number;
+    };
+  };
+  credits?: {
+    has_credits: boolean;
+    unlimited: boolean;
+    balance: number | null;
+  };
+}
+
 export type TimeRange = "today" | "week" | "month" | "all";
 
 export interface SessionsIndex {

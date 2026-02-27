@@ -8,8 +8,12 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 type ExtensionPreferences = {
-  /** Credentials Path - Path to Claude credentials file */
+  /** Claude Credentials Path - Path to Claude credentials file */
   "credentialsPath": string,
+  /** Codex Credentials Path - Path to Codex auth file */
+  "codexCredentialsPath": string,
+  /** Menu Bar Display - Show remaining capacity or current usage in the menu bar */
+  "menuBarDisplay": "remaining" | "usage",
   /** Default Model - Default model for cost calculation */
   "defaultModel": "opus" | "sonnet"
 }

@@ -5,12 +5,26 @@ import {
   launchCommand,
   LaunchType,
   openCommandPreferences,
+  Cache,
+  getPreferenceValues,
+  open,
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { fetchRateLimits } from "./lib/anthropic-api";
 import { getSubscriptionInfo } from "./lib/credentials";
 import { getUsageTotals } from "./lib/session-parser";
-import type { UsageApiResponse, RateLimitWindow } from "./lib/types";
+import { fetchCodexUsage } from "./lib/codex-api";
+import { getCodexPlanType } from "./lib/codex-credentials";
+import {
+  checkServiceAvailability,
+  type ServiceAvailability,
+  type Service,
+} from "./lib/service-config";
+import type {
+  UsageApiResponse,
+  RateLimitWindow,
+  CodexUsageResponse,
+} from "./lib/types";
 import type { SubscriptionInfo } from "./lib/credentials";
 import type { UsageTotals } from "./lib/session-parser";
 import {
@@ -18,43 +32,96 @@ import {
   formatCost,
   formatLineCount,
   formatResetCountdown,
+  formatCodexPlanType,
+  unixToIso,
   centsToDollars,
 } from "./lib/formatting";
 
+const cache = new Cache();
+
+function getSelectedService(): Service {
+  const val = cache.get("menuBarService");
+  return val === "codex" ? "codex" : "claude";
+}
+
 interface MenuBarData {
-  rateLimits: UsageApiResponse;
+  availability: ServiceAvailability;
+  rateLimits: UsageApiResponse | null;
   subscription: SubscriptionInfo;
   today: UsageTotals;
   month: UsageTotals;
+  codex: CodexUsageResponse | null;
+  codexPlanType: string;
 }
 
+const emptyTotals: UsageTotals = {
+  totalTokens: 0,
+  totalCost: 0,
+  linesAdded: 0,
+  linesRemoved: 0,
+};
+
 async function loadMenuBarData(): Promise<MenuBarData> {
+  const availability = checkServiceAvailability();
+
   let subscription: SubscriptionInfo = {
     tierLabel: "Claude",
     subscriptionType: "",
     rateLimitTier: "",
   };
-  try {
-    subscription = getSubscriptionInfo();
-  } catch {
-    // not authenticated yet
+  let rateLimits: UsageApiResponse | null = null;
+  let today: UsageTotals = emptyTotals;
+  let month: UsageTotals = emptyTotals;
+
+  if (availability.claude) {
+    try {
+      subscription = getSubscriptionInfo();
+    } catch {
+      // not authenticated yet
+    }
+
+    const [rl, t, m] = await Promise.all([
+      fetchRateLimits(),
+      getUsageTotals("today"),
+      getUsageTotals("month"),
+    ]);
+    rateLimits = rl;
+    today = t;
+    month = m;
   }
 
-  const [rateLimits, today, month] = await Promise.all([
-    fetchRateLimits(),
-    getUsageTotals("today"),
-    getUsageTotals("month"),
-  ]);
+  let codex: CodexUsageResponse | null = null;
+  let codexPlanType = "";
+  if (availability.codex) {
+    try {
+      codexPlanType = getCodexPlanType();
+      codex = await fetchCodexUsage();
+      if (!codexPlanType && codex.plan_type) {
+        codexPlanType = codex.plan_type;
+      }
+    } catch {
+      // Codex not configured — skip silently
+    }
+  }
 
-  return { rateLimits, subscription, today, month };
+  return {
+    availability,
+    rateLimits,
+    subscription,
+    today,
+    month,
+    codex,
+    codexPlanType,
+  };
 }
 
-function statusColor(utilization: number): Color {
+const DARK_GREEN: Color.Dynamic = { light: "#1a7f37", dark: "#2ea043" };
+
+function statusColor(utilization: number): Color | Color.Dynamic {
   const left = 100 - utilization;
-  if (left <= 10) return Color.Red;
-  if (left <= 20) return Color.Orange;
-  if (left <= 50) return Color.Yellow;
-  return Color.Green;
+  if (left <= 20) return Color.Red;
+  if (left <= 60) return Color.Orange;
+  return DARK_GREEN;
 }
 
 export default function MenuBar() {
@@ -65,18 +132,37 @@ export default function MenuBar() {
   const openDashboard = () =>
     launchCommand({ name: "token-watcher", type: LaunchType.UserInitiated });
 
-  // Title: show remaining % in menu bar
+  // Read which service drives the title (set from the dashboard dropdown)
+  const selected = getSelectedService();
+  const prefs = getPreferenceValues<{ menuBarDisplay?: string }>();
+  const showUsage = prefs.menuBarDisplay === "usage";
+
+  // Title: show % in menu bar based on selected service and display preference
   let title = "⏳";
   let icon: MenuBarExtra.Props["icon"] = Icon.BarChart;
-  if (error) {
+  if (error && !data) {
     title = "⚠️";
   } else if (data) {
-    const left = Math.max(0, 100 - data.rateLimits.five_hour.utilization);
-    title = `${left.toFixed(0)}%`;
-    icon = {
-      source: Icon.CircleFilled,
-      tintColor: statusColor(data.rateLimits.five_hour.utilization),
-    };
+    if (!data.availability.anyConfigured) {
+      title = "Setup";
+      icon = Icon.Gear;
+    } else if (selected === "codex" && data.codex?.rate_limit?.primary_window) {
+      const used = data.codex.rate_limit.primary_window.used_percent;
+      const display = showUsage ? used : Math.max(0, 100 - used);
+      title = `${display.toFixed(0)}%`;
+      icon = {
+        source: Icon.CircleFilled,
+        tintColor: statusColor(used),
+      };
+    } else if (data.rateLimits) {
+      const used = data.rateLimits.five_hour.utilization;
+      const display = showUsage ? used : Math.max(0, 100 - used);
+      title = `${display.toFixed(0)}%`;
+      icon = {
+        source: Icon.CircleFilled,
+        tintColor: statusColor(used),
+      };
+    }
   }
 
   return (
@@ -84,9 +170,9 @@ export default function MenuBar() {
       icon={icon}
       title={title}
       isLoading={isLoading}
-      tooltip="Claude Token Watcher"
+      tooltip="Token Watcher"
     >
-      {error ? (
+      {error && !data ? (
         <MenuBarExtra.Section title="Error">
           <MenuBarExtra.Item
             title={
@@ -98,74 +184,149 @@ export default function MenuBar() {
             onAction={() => openCommandPreferences()}
           />
         </MenuBarExtra.Section>
+      ) : data && !data.availability.anyConfigured ? (
+        <MenuBarExtra.Section title="Setup Required">
+          <MenuBarExtra.Item
+            title="Set up Claude Code"
+            icon={Icon.Terminal}
+            onAction={() =>
+              open("https://docs.anthropic.com/en/docs/claude-code/overview")
+            }
+          />
+          <MenuBarExtra.Item
+            title="Set up Codex"
+            icon={Icon.Terminal}
+            onAction={() => open("https://codex.openai.com")}
+          />
+          <MenuBarExtra.Item
+            title="Open Token Watcher"
+            icon={Icon.List}
+            onAction={openDashboard}
+          />
+        </MenuBarExtra.Section>
       ) : data ? (
         <>
-          <MenuBarExtra.Section
-            title={`Claude · ${data.subscription.tierLabel}`}
-          >
-            <RateLimitRow
-              label="Session"
-              window={data.rateLimits.five_hour}
-              onAction={openDashboard}
-            />
-            <RateLimitRow
-              label="Weekly"
-              window={data.rateLimits.seven_day}
-              onAction={openDashboard}
-            />
-            {data.rateLimits.seven_day_sonnet && (
+          {/* Claude section */}
+          {data.availability.claude && data.rateLimits && (
+            <MenuBarExtra.Section
+              title={`Claude · ${data.subscription.tierLabel}`}
+            >
               <RateLimitRow
-                label="Sonnet"
-                window={data.rateLimits.seven_day_sonnet}
+                label="Session"
+                window={data.rateLimits.five_hour}
                 onAction={openDashboard}
               />
-            )}
-            {data.rateLimits.seven_day_opus && (
               <RateLimitRow
-                label="Opus"
-                window={data.rateLimits.seven_day_opus}
+                label="Weekly"
+                window={data.rateLimits.seven_day}
                 onAction={openDashboard}
               />
-            )}
-            {data.rateLimits.extra_usage?.is_enabled && (
+              {data.rateLimits.seven_day_sonnet && (
+                <RateLimitRow
+                  label="Sonnet"
+                  window={data.rateLimits.seven_day_sonnet}
+                  onAction={openDashboard}
+                />
+              )}
+              {data.rateLimits.seven_day_opus && (
+                <RateLimitRow
+                  label="Opus"
+                  window={data.rateLimits.seven_day_opus}
+                  onAction={openDashboard}
+                />
+              )}
+              {data.rateLimits.extra_usage?.is_enabled && (
+                <MenuBarExtra.Item
+                  icon={{
+                    source: Icon.CircleFilled,
+                    tintColor: Color.SecondaryText,
+                  }}
+                  title={`Extra  ${formatCost(centsToDollars(data.rateLimits.extra_usage.used_credits))} / ${formatCost(centsToDollars(data.rateLimits.extra_usage.monthly_limit))}`}
+                  onAction={openDashboard}
+                />
+              )}
+            </MenuBarExtra.Section>
+          )}
+
+          {/* Codex section */}
+          {data.availability.codex && data.codex && (
+            <MenuBarExtra.Section
+              title={`Codex · ${formatCodexPlanType(data.codexPlanType)}`}
+            >
+              {data.codex.rate_limit?.primary_window && (
+                <CodexWindowRow
+                  label="Session"
+                  usedPercent={
+                    data.codex.rate_limit.primary_window.used_percent
+                  }
+                  resetAt={data.codex.rate_limit.primary_window.reset_at}
+                  onAction={openDashboard}
+                />
+              )}
+              {data.codex.rate_limit?.secondary_window && (
+                <CodexWindowRow
+                  label="Weekly"
+                  usedPercent={
+                    data.codex.rate_limit.secondary_window.used_percent
+                  }
+                  resetAt={data.codex.rate_limit.secondary_window.reset_at}
+                  onAction={openDashboard}
+                />
+              )}
+              {!data.codex.rate_limit?.primary_window &&
+                !data.codex.rate_limit?.secondary_window && (
+                  <MenuBarExtra.Item
+                    title="No usage data"
+                    icon={Icon.Info}
+                    onAction={openDashboard}
+                  />
+                )}
+              {data.codex.credits && !data.codex.credits.unlimited && (
+                <MenuBarExtra.Item
+                  icon={{
+                    source: Icon.CircleFilled,
+                    tintColor: Color.SecondaryText,
+                  }}
+                  title={`Credits  $${Number(data.codex.credits.balance ?? 0).toFixed(2)}`}
+                  onAction={openDashboard}
+                />
+              )}
+            </MenuBarExtra.Section>
+          )}
+
+          {/* Cost (Claude only) */}
+          {data.availability.claude && (
+            <MenuBarExtra.Section title="Cost">
               <MenuBarExtra.Item
-                icon={{
-                  source: Icon.CircleFilled,
-                  tintColor: Color.SecondaryText,
-                }}
-                title={`Extra  ${formatCost(centsToDollars(data.rateLimits.extra_usage.used_credits))} / ${formatCost(centsToDollars(data.rateLimits.extra_usage.monthly_limit))}`}
+                icon={Icon.Coins}
+                title={`Today  ${formatCost(data.today.totalCost)}`}
+                subtitle={`${formatTokenCount(data.today.totalTokens)} tokens`}
                 onAction={openDashboard}
               />
-            )}
-          </MenuBarExtra.Section>
+              <MenuBarExtra.Item
+                icon={Icon.Calendar}
+                title={`30 Days  ${formatCost(data.month.totalCost)}`}
+                subtitle={`${formatTokenCount(data.month.totalTokens)} tokens`}
+                onAction={openDashboard}
+              />
+            </MenuBarExtra.Section>
+          )}
 
-          <MenuBarExtra.Section title="Cost">
-            <MenuBarExtra.Item
-              icon={Icon.Coins}
-              title={`Today  ${formatCost(data.today.totalCost)}`}
-              subtitle={`${formatTokenCount(data.today.totalTokens)} tokens`}
-              onAction={openDashboard}
-            />
-            <MenuBarExtra.Item
-              icon={Icon.Calendar}
-              title={`30 Days  ${formatCost(data.month.totalCost)}`}
-              subtitle={`${formatTokenCount(data.month.totalTokens)} tokens`}
-              onAction={openDashboard}
-            />
-          </MenuBarExtra.Section>
-
-          <MenuBarExtra.Section title="Lines">
-            <MenuBarExtra.Item
-              icon={Icon.Code}
-              title={`Today  ${formatLineCount(data.today.linesAdded, data.today.linesRemoved)}`}
-              onAction={openDashboard}
-            />
-            <MenuBarExtra.Item
-              icon={Icon.Code}
-              title={`30 Days  ${formatLineCount(data.month.linesAdded, data.month.linesRemoved)}`}
-              onAction={openDashboard}
-            />
-          </MenuBarExtra.Section>
+          {/* Lines (Claude only) */}
+          {data.availability.claude && (
+            <MenuBarExtra.Section title="Lines">
+              <MenuBarExtra.Item
+                icon={Icon.Code}
+                title={`Today  ${formatLineCount(data.today.linesAdded, data.today.linesRemoved)}`}
+                onAction={openDashboard}
+              />
+              <MenuBarExtra.Item
+                icon={Icon.Code}
+                title={`30 Days  ${formatLineCount(data.month.linesAdded, data.month.linesRemoved)}`}
+                onAction={openDashboard}
+              />
+            </MenuBarExtra.Section>
+          )}
         </>
       ) : null}
 
@@ -205,6 +366,31 @@ function RateLimitRow({
       }}
       title={`${label}  ${left.toFixed(0)}% left`}
       subtitle={`Resets in ${formatResetCountdown(w.resets_at)}`}
+      onAction={onAction}
+    />
+  );
+}
+
+function CodexWindowRow({
+  label,
+  usedPercent,
+  resetAt,
+  onAction,
+}: {
+  label: string;
+  usedPercent: number;
+  resetAt: number;
+  onAction: () => void;
+}) {
+  const left = Math.max(0, 100 - usedPercent);
+  return (
+    <MenuBarExtra.Item
+      icon={{
+        source: Icon.CircleFilled,
+        tintColor: statusColor(usedPercent),
+      }}
+      title={`${label}  ${left.toFixed(0)}% left`}
+      subtitle={`Resets in ${formatResetCountdown(unixToIso(resetAt))}`}
       onAction={onAction}
     />
   );

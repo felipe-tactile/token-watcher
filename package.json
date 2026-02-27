@@ -1,7 +1,7 @@
 {
   "name": "token-watcher",
-  "title": "Claude Token Watcher",
-  "description": "Monitor Claude Code token usage and rate limits from the menu bar",
+  "title": "Token Watcher",
+  "description": "Monitor Claude Code and OpenAI Codex token usage and rate limits",
   "icon": "icon.png",
   "author": "felipe",
   "license": "MIT",
@@ -32,11 +32,31 @@
   "preferences": [
     {
       "name": "credentialsPath",
-      "title": "Credentials Path",
+      "title": "Claude Credentials Path",
       "description": "Path to Claude credentials file",
       "type": "textfield",
       "default": "~/.claude/.credentials.json",
       "required": false
+    },
+    {
+      "name": "codexCredentialsPath",
+      "title": "Codex Credentials Path",
+      "description": "Path to Codex auth file",
+      "type": "textfield",
+      "default": "~/.codex/auth.json",
+      "required": false
+    },
+    {
+      "name": "menuBarDisplay",
+      "title": "Menu Bar Display",
+      "description": "Show remaining capacity or current usage in the menu bar",
+      "type": "dropdown",
+      "default": "remaining",
+      "required": false,
+      "data": [
+        { "title": "Remaining %", "value": "remaining" },
+        { "title": "Usage %", "value": "usage" }
+      ]
     },
     {
       "name": "defaultModel",
