@@ -28,3 +28,37 @@ export function getValidAccessToken(): string {
   // If expired, we still return it and let the API call handle 401
   return creds.claudeAiOauth.accessToken;
 }
+
+export interface SubscriptionInfo {
+  tierLabel: string;
+  subscriptionType: string;
+  rateLimitTier: string;
+}
+
+const TIER_LABELS: Record<string, string> = {
+  default_claude_max_5x: "Max 5x",
+  default_claude_max: "Max",
+  default_claude_pro: "Pro",
+  default_claude_team: "Team",
+  default_claude_enterprise: "Enterprise",
+  default_claude_free: "Free",
+};
+
+export function getSubscriptionInfo(): SubscriptionInfo {
+  const creds = readCredentials();
+  const { subscriptionType, rateLimitTier } = creds.claudeAiOauth;
+
+  let tierLabel = TIER_LABELS[rateLimitTier] || "";
+  if (!tierLabel) {
+    // Fallback: derive from rateLimitTier string
+    const match = rateLimitTier.match(/claude_(\w+)/);
+    if (match) {
+      tierLabel = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+    } else {
+      tierLabel =
+        subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1);
+    }
+  }
+
+  return { tierLabel, subscriptionType, rateLimitTier };
+}

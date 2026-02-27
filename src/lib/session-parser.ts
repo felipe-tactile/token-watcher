@@ -43,6 +43,11 @@ function getTimeRangeStart(range: TimeRange): Date | null {
   if (range === "today") {
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
+  if (range === "month") {
+    const monthAgo = new Date(now);
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    return monthAgo;
+  }
   // week
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);
@@ -219,4 +224,24 @@ export async function getProjectSummaries(
   // Sort projects by total cost descending
   summaries.sort((a, b) => b.totalCost - a.totalCost);
   return summaries;
+}
+
+export interface UsageTotals {
+  totalTokens: number;
+  totalCost: number;
+}
+
+export async function getUsageTotals(range: TimeRange): Promise<UsageTotals> {
+  const summaries = await getProjectSummaries(range);
+  let totalTokens = 0;
+  let totalCost = 0;
+  for (const p of summaries) {
+    totalTokens +=
+      p.totalTokens.input_tokens +
+      p.totalTokens.output_tokens +
+      p.totalTokens.cache_creation_input_tokens +
+      p.totalTokens.cache_read_input_tokens;
+    totalCost += p.totalCost;
+  }
+  return { totalTokens, totalCost };
 }

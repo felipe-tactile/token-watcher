@@ -8,17 +8,17 @@
   "commands": [
     {
       "name": "menu-bar",
-      "title": "Claude Token Watcher",
+      "title": "Token Watcher Menu Bar",
       "subtitle": "Token Usage",
-      "description": "Show Claude Code token usage and rate limits in the menu bar",
+      "description": "Show token usage and rate limits in the menu bar",
       "mode": "menu-bar",
       "interval": "5m"
     },
     {
-      "name": "detail-view",
-      "title": "Claude Token Details",
+      "name": "token-watcher",
+      "title": "Token Watcher",
       "subtitle": "Token Usage",
-      "description": "View detailed per-project token usage and rate limits",
+      "description": "View rate limits, usage, and per-project cost breakdown",
       "mode": "view"
     }
   ],

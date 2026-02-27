@@ -85,7 +85,7 @@ export interface CostBreakdown {
 
 export type ModelTier = "opus" | "sonnet";
 
-export type TimeRange = "today" | "week" | "all";
+export type TimeRange = "today" | "week" | "month" | "all";
 
 export interface SessionsIndex {
   version: number;

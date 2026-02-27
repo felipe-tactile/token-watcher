@@ -17,6 +17,11 @@ export function formatCost(usd: number): string {
   return `$${usd.toFixed(4)}`;
 }
 
+/** API returns extra_usage credits/limits in cents — convert to dollars */
+export function centsToDollars(cents: number): number {
+  return cents / 100;
+}
+
 export function formatRelativeTime(isoString: string): string {
   const date = new Date(isoString);
   const now = new Date();
@@ -58,4 +63,28 @@ export function formatTimestamp(isoString: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+export function progressBar(usedPct: number, width = 30): string {
+  const clamped = Math.max(0, Math.min(100, usedPct));
+  const filled = Math.round((clamped / 100) * width);
+  const empty = width - filled;
+  return "\u2588".repeat(filled) + "\u2591".repeat(empty);
+}
+
+export function formatResetCountdown(isoString: string): string {
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  if (diffMs <= 0) return "now";
+
+  const totalMinutes = Math.floor(diffMs / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  const remainingMinutes = totalMinutes % 60;
+
+  if (days > 0) return `${days}d ${remainingHours}h`;
+  if (hours > 0) return `${hours}h ${remainingMinutes}m`;
+  return `${remainingMinutes}m`;
 }

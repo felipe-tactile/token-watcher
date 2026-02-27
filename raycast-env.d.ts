@@ -20,14 +20,14 @@ declare type Preferences = ExtensionPreferences
 declare namespace Preferences {
   /** Preferences accessible in the `menu-bar` command */
   export type MenuBar = ExtensionPreferences & {}
-  /** Preferences accessible in the `detail-view` command */
-  export type DetailView = ExtensionPreferences & {}
+  /** Preferences accessible in the `token-watcher` command */
+  export type TokenWatcher = ExtensionPreferences & {}
 }
 
 declare namespace Arguments {
   /** Arguments passed to the `menu-bar` command */
   export type MenuBar = {}
-  /** Arguments passed to the `detail-view` command */
-  export type DetailView = {}
+  /** Arguments passed to the `token-watcher` command */
+  export type TokenWatcher = {}
 }
 
