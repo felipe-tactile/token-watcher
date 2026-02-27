@@ -22,6 +22,8 @@ declare namespace Preferences {
   export type MenuBar = ExtensionPreferences & {}
   /** Preferences accessible in the `token-watcher` command */
   export type TokenWatcher = ExtensionPreferences & {}
+  /** Preferences accessible in the `token-watcher-projects` command */
+  export type TokenWatcherProjects = ExtensionPreferences & {}
 }
 
 declare namespace Arguments {
@@ -29,5 +31,7 @@ declare namespace Arguments {
   export type MenuBar = {}
   /** Arguments passed to the `token-watcher` command */
   export type TokenWatcher = {}
+  /** Arguments passed to the `token-watcher-projects` command */
+  export type TokenWatcherProjects = {}
 }
 

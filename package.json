@@ -20,6 +20,13 @@
       "subtitle": "Token Usage",
       "description": "View rate limits, usage, and per-project cost breakdown",
       "mode": "view"
+    },
+    {
+      "name": "token-watcher-projects",
+      "title": "Token Watcher Projects",
+      "subtitle": "Per-Project Usage",
+      "description": "View token usage and cost breakdown per project",
+      "mode": "view"
     }
   ],
   "preferences": [
