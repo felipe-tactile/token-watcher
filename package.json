@@ -3,7 +3,7 @@
   "title": "Token Watcher",
   "description": "Monitor Claude Code and OpenAI Codex token usage and rate limits",
   "icon": "icon.png",
-  "author": "Felipe Boveda",
+  "author": "Daneel_Olivaw",
   "categories": ["Developer Tools", "Productivity"],
   "license": "MIT",
   "commands": [
