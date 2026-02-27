@@ -18,6 +18,7 @@ import {
   formatResetCountdown,
   formatTokenCount,
   formatCost,
+  formatLineCount,
   formatTimestamp,
   getUtilizationColor,
   centsToDollars,
@@ -231,9 +232,45 @@ function ClaudeSection({
                   title="Today"
                   text={`${formatCost(today.totalCost)} · ${formatTokenCount(today.totalTokens)} tokens`}
                 />
+                <List.Item.Detail.Metadata.Separator />
                 <List.Item.Detail.Metadata.Label
                   title="Last 30 Days"
                   text={`${formatCost(month.totalCost)} · ${formatTokenCount(month.totalTokens)} tokens`}
+                />
+              </List.Item.Detail.Metadata>
+            }
+          />
+        }
+      />
+      <List.Item
+        icon={Icon.Code}
+        title="Lines"
+        accessories={[
+          {
+            text: `Today ${formatLineCount(today.linesAdded, today.linesRemoved)}`,
+          },
+        ]}
+        actions={
+          <ActionPanel>
+            <Action
+              title="Refresh"
+              icon={Icon.ArrowClockwise}
+              onAction={refresh}
+            />
+          </ActionPanel>
+        }
+        detail={
+          <List.Item.Detail
+            metadata={
+              <List.Item.Detail.Metadata>
+                <List.Item.Detail.Metadata.Label
+                  title="Today"
+                  text={formatLineCount(today.linesAdded, today.linesRemoved)}
+                />
+                <List.Item.Detail.Metadata.Separator />
+                <List.Item.Detail.Metadata.Label
+                  title="Last 30 Days"
+                  text={formatLineCount(month.linesAdded, month.linesRemoved)}
                 />
               </List.Item.Detail.Metadata>
             }
@@ -397,6 +434,10 @@ function ProjectItem({ project }: { project: ProjectSummary }) {
                 title="Total Cost"
                 text={formatCost(project.totalCost)}
               />
+              <List.Item.Detail.Metadata.Label
+                title="Lines"
+                text={formatLineCount(project.linesAdded, project.linesRemoved)}
+              />
             </List.Item.Detail.Metadata>
           }
         />
@@ -487,6 +528,10 @@ function SessionItem({
               <List.Item.Detail.Metadata.Label
                 title="Cost"
                 text={formatCost(session.costUSD)}
+              />
+              <List.Item.Detail.Metadata.Label
+                title="Lines"
+                text={formatLineCount(session.linesAdded, session.linesRemoved)}
               />
               <List.Item.Detail.Metadata.Label
                 title="Started"

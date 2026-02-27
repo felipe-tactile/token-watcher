@@ -64,6 +64,8 @@ export interface SessionSummary {
   firstTimestamp: string;
   lastTimestamp: string;
   costUSD: number;
+  linesAdded: number;
+  linesRemoved: number;
 }
 
 export interface ProjectSummary {
@@ -73,6 +75,8 @@ export interface ProjectSummary {
   totalTokens: TokenUsage;
   totalCost: number;
   sessionCount: number;
+  linesAdded: number;
+  linesRemoved: number;
 }
 
 export interface CostBreakdown {

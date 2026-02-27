@@ -6,6 +6,7 @@ import type { TimeRange, ProjectSummary, SessionSummary } from "./lib/types";
 import {
   formatTokenCount,
   formatCost,
+  formatLineCount,
   formatTimestamp,
 } from "./lib/formatting";
 
@@ -145,6 +146,10 @@ function ProjectItem({ project }: { project: ProjectSummary }) {
                 title="Total Cost"
                 text={formatCost(project.totalCost)}
               />
+              <List.Item.Detail.Metadata.Label
+                title="Lines"
+                text={formatLineCount(project.linesAdded, project.linesRemoved)}
+              />
               {project.sessions.length > 0 && (
                 <>
                   <List.Item.Detail.Metadata.Separator />
@@ -153,7 +158,7 @@ function ProjectItem({ project }: { project: ProjectSummary }) {
                     <List.Item.Detail.Metadata.Label
                       key={s.sessionId}
                       title={`  ${sessionLabel(s)}`}
-                      text={`${formatTokenCount(allTokens(s.totalTokens))} · ${formatCost(s.costUSD)}`}
+                      text={`${formatTokenCount(allTokens(s.totalTokens))} · ${formatCost(s.costUSD)} · ${formatLineCount(s.linesAdded, s.linesRemoved)}`}
                     />
                   ))}
                 </>

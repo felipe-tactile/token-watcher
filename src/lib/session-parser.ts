@@ -90,6 +90,42 @@ export function listProjects(): ProjectDir[] {
   });
 }
 
+function countLines(s: string): number {
+  if (!s) return 0;
+  return s.split("\n").length;
+}
+
+function countLinesFromToolUse(content: unknown[]): {
+  added: number;
+  removed: number;
+} {
+  let added = 0;
+  let removed = 0;
+  if (!Array.isArray(content)) return { added, removed };
+
+  for (const block of content) {
+    const b = block as {
+      type?: string;
+      name?: string;
+      input?: Record<string, string>;
+    };
+    if (b.type !== "tool_use" || !b.input) continue;
+
+    if (b.name === "Write") {
+      added += countLines(b.input.content);
+    } else if (b.name === "Edit") {
+      const oldLines = countLines(b.input.old_string);
+      const newLines = countLines(b.input.new_string);
+      if (newLines > oldLines) {
+        added += newLines - oldLines;
+      } else if (oldLines > newLines) {
+        removed += oldLines - newLines;
+      }
+    }
+  }
+  return { added, removed };
+}
+
 export async function parseSessionFile(
   filePath: string,
   rangeStart: Date | null,
@@ -102,6 +138,8 @@ export async function parseSessionFile(
   let model = "";
   let firstTimestamp = "";
   let lastTimestamp = "";
+  let linesAdded = 0;
+  let linesRemoved = 0;
 
   return new Promise((resolve) => {
     const rl = createInterface({
@@ -112,13 +150,23 @@ export async function parseSessionFile(
     rl.on("line", (line) => {
       try {
         const entry = JSON.parse(line);
-        if (entry.type !== "assistant" || !entry.message?.usage) return;
+        if (entry.type !== "assistant") return;
 
         const ts = entry.timestamp;
         if (rangeStart && ts) {
           const msgDate = new Date(ts);
           if (msgDate < rangeStart) return;
         }
+
+        // Count lines from tool use
+        if (entry.message?.content) {
+          const lines = countLinesFromToolUse(entry.message.content);
+          linesAdded += lines.added;
+          linesRemoved += lines.removed;
+        }
+
+        // Count tokens
+        if (!entry.message?.usage) return;
 
         const usage = entry.message.usage;
         tokens.input_tokens += usage.input_tokens || 0;
@@ -155,6 +203,8 @@ export async function parseSessionFile(
         firstTimestamp,
         lastTimestamp,
         costUSD: cost.totalCost,
+        linesAdded,
+        linesRemoved,
       });
     });
 
@@ -200,12 +250,16 @@ export async function getProjectSummaries(
 
     let totalTokens = emptyTokenUsage();
     let totalCost = 0;
+    let linesAdded = 0;
+    let linesRemoved = 0;
 
     for (const session of sessions) {
       session.projectDir = project.dirName;
       session.projectPath = project.originalPath;
       totalTokens = addTokens(totalTokens, session.totalTokens);
       totalCost += session.costUSD;
+      linesAdded += session.linesAdded;
+      linesRemoved += session.linesRemoved;
     }
 
     // Sort sessions by last timestamp, most recent first
@@ -218,6 +272,8 @@ export async function getProjectSummaries(
       totalTokens,
       totalCost,
       sessionCount: sessions.length,
+      linesAdded,
+      linesRemoved,
     });
   }
 
@@ -229,12 +285,16 @@ export async function getProjectSummaries(
 export interface UsageTotals {
   totalTokens: number;
   totalCost: number;
+  linesAdded: number;
+  linesRemoved: number;
 }
 
 export async function getUsageTotals(range: TimeRange): Promise<UsageTotals> {
   const summaries = await getProjectSummaries(range);
   let totalTokens = 0;
   let totalCost = 0;
+  let linesAdded = 0;
+  let linesRemoved = 0;
   for (const p of summaries) {
     totalTokens +=
       p.totalTokens.input_tokens +
@@ -242,6 +302,8 @@ export async function getUsageTotals(range: TimeRange): Promise<UsageTotals> {
       p.totalTokens.cache_creation_input_tokens +
       p.totalTokens.cache_read_input_tokens;
     totalCost += p.totalCost;
+    linesAdded += p.linesAdded;
+    linesRemoved += p.linesRemoved;
   }
-  return { totalTokens, totalCost };
+  return { totalTokens, totalCost, linesAdded, linesRemoved };
 }

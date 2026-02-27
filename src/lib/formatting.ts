@@ -10,6 +10,14 @@ export function formatTokenCount(count: number): string {
   return count.toString();
 }
 
+export function formatLineCount(added: number, removed: number): string {
+  const parts: string[] = [];
+  if (added > 0) parts.push(`+${added.toLocaleString()}`);
+  if (removed > 0) parts.push(`-${removed.toLocaleString()}`);
+  if (parts.length === 0) return "0 lines";
+  return `${parts.join(" / ")} lines`;
+}
+
 export function formatCost(usd: number): string {
   if (usd >= 1) return `$${usd.toFixed(2)}`;
   if (usd >= 0.01) return `$${usd.toFixed(3)}`;

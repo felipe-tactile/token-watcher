@@ -16,6 +16,7 @@ import type { UsageTotals } from "./lib/session-parser";
 import {
   formatTokenCount,
   formatCost,
+  formatLineCount,
   formatResetCountdown,
   centsToDollars,
 } from "./lib/formatting";
@@ -149,6 +150,19 @@ export default function MenuBar() {
               icon={Icon.Calendar}
               title={`30 Days  ${formatCost(data.month.totalCost)}`}
               subtitle={`${formatTokenCount(data.month.totalTokens)} tokens`}
+              onAction={openDashboard}
+            />
+          </MenuBarExtra.Section>
+
+          <MenuBarExtra.Section title="Lines">
+            <MenuBarExtra.Item
+              icon={Icon.Code}
+              title={`Today  ${formatLineCount(data.today.linesAdded, data.today.linesRemoved)}`}
+              onAction={openDashboard}
+            />
+            <MenuBarExtra.Item
+              icon={Icon.Code}
+              title={`30 Days  ${formatLineCount(data.month.linesAdded, data.month.linesRemoved)}`}
               onAction={openDashboard}
             />
           </MenuBarExtra.Section>
